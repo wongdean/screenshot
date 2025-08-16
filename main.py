@@ -61,11 +61,18 @@ async def take_screenshot(
         try:
             browser = await p.chromium.launch()
             
-            # 使用手机端配置避免弹窗
-            context = await browser.new_context(**p.devices['iPhone 14 Pro Max'])
+            # 使用手机端配置避免弹窗，禁用缓存确保获取最新内容
+            context = await browser.new_context(
+                **p.devices['iPhone 14 Pro Max'],
+                ignore_https_errors=True
+            )
             page = await context.new_page()
             
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            # 禁用缓存确保获取最新页面内容
+            await page.route("**/*", lambda route: route.continue_(headers={**route.request.headers, "Cache-Control": "no-cache, no-store, must-revalidate"}))
+            
+            # 等待网络空闲确保动态内容加载完成
+            await page.goto(url, wait_until="networkidle", timeout=60000)
 
             # 点击时间间隔按钮（如果提供）
             if time_interval:
@@ -75,7 +82,14 @@ async def take_screenshot(
                 except PlaywrightTimeoutError:
                     raise HTTPException(status_code=404, detail=f"未找到文本为 '{time_interval}' 的按钮。")
             
+            # 等待页面稳定，确保动态内容更新完成
             await asyncio.sleep(wait_seconds)
+            
+            # 额外等待网络请求完成，确保K线数据加载
+            try:
+                await page.wait_for_load_state("networkidle", timeout=10000)
+            except PlaywrightTimeoutError:
+                pass  # 如果等待超时，继续截图
 
             # 全页截图
             full_screenshot_bytes = await page.screenshot(full_page=True)
