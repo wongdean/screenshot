@@ -8,6 +8,12 @@ COPY requirements.txt .
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 设置时区为东八区
+RUN apt-get update && apt-get install -y tzdata && \
+    ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # 复制应用代码
 COPY . .
 
@@ -18,6 +24,7 @@ RUN playwright install chromium
 ENV PYTHONUNBUFFERED=1
 ENV HOST=0.0.0.0
 ENV PORT=8000
+ENV TZ=Asia/Shanghai
 
 # 暴露端口
 EXPOSE $PORT
