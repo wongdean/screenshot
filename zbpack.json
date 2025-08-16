@@ -1,0 +1,7 @@
+{
+  "build_command": "",
+  "install_command": "",
+  "start_command": "uvicorn main:app --host 0.0.0.0 --port $PORT",
+  "output_dir": ".",
+  "framework": "docker"
+}
